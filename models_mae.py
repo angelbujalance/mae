@@ -283,7 +283,7 @@ class MaskedAutoencoderViT(nn.Module):
         # REGULARIZATION (using normalized correlation coefficient of the actual signals)
         imgs_hat = self.unpatchify(pred)
         target_normalized = (imgs - imgs.mean(dim=-1, keepdim=True)) / (imgs.var(dim=-1, keepdim=True) + 1e-12)**0.5
-        pred_normalized = (imgs_hat - imgs_hat.var(dim=-1, keepdim=True)) / (imgs_hat.var(dim=-1, keepdim=True) + 1e-12)**0.5
+        pred_normalized = (imgs_hat - imgs_hat.mean(dim=-1, keepdim=True)) / (imgs_hat.var(dim=-1, keepdim=True) + 1e-12)**0.5
 
         nb_of_signals = 1
         for dim in range(imgs.dim()-1): # all but the last dimension (which is the actual signal)
