@@ -20,7 +20,7 @@ from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
 # from torch.utils.tensorboard import SummaryWriter
-import wandb
+#import wandb
 
 # assert timm.__version__ == "0.3.2" # version check
 from timm.models.layers import trunc_normal_
@@ -188,11 +188,11 @@ def get_args_parser():
                         help='path where to save, empty for no saving')
     parser.add_argument('--log_dir', default='',
                         help='path where to tensorboard log (default: ./logs)')
-    parser.add_argument('--wandb', action='store_true', default=False)
-    parser.add_argument('--wandb_project', default='',
-                        help='project where to wandb log')
-    parser.add_argument('--wandb_id', default='', type=str,
-                        help='id of the current run')
+    # parser.add_argument('--wandb', action='store_true', default=False)
+    # parser.add_argument('--wandb_project', default='',
+    #                     help='project where to wandb log')
+    # parser.add_argument('--wandb_id', default='', type=str,
+    #                     help='id of the current run')
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
     parser.add_argument('--seed', default=0, type=int)
@@ -289,12 +289,12 @@ def main(args):
         log_writer = None
 
     # wandb logging
-    if args.wandb == True:
-        config = vars(args)
-        if args.wandb_id:
-            wandb.init(project=args.wandb_project, id=args.wandb_id, config=config, entity="oturgut")
-        else:
-            wandb.init(project=args.wandb_project, config=config, entity="oturgut")
+    # if args.wandb == True:
+    #     config = vars(args)
+    #     if args.wandb_id:
+    #         wandb.init(project=args.wandb_project, id=args.wandb_id, config=config, entity="oturgut")
+    #     else:
+    #         wandb.init(project=args.wandb_project, config=config, entity="oturgut")
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, 
@@ -435,8 +435,8 @@ def main(args):
                       f"of the network on the {len(dataset_val)} test images: {test_stats['rmse']:.4f} / {test_stats['mae']:.4f} /",
                       f"{test_stats['pcc']:.4f} / {test_stats['r2']:.4f}")
         
-            if args.wandb:
-                wandb.log(test_history)
+            # if args.wandb:
+            #     wandb.log(test_history)
 
         exit(0)
 
