@@ -31,7 +31,11 @@ class MaskedAutoencoderViT(nn.Module):
 
         # --------------------------------------------------------------------------
         # MAE encoder specifics
-        self.patch_embed = PatchEmbed(img_size, patch_size, embed_dim)
+        # print("img_size", img_size)
+        # print("patch_size", patch_size)
+        # self.patch_embed = PatchEmbed(img_size, patch_size, embed_dim)
+        self.patch_embed = PatchEmbed(img_size, patch_size, 1, embed_dim)
+        # print("self.patch_embed", self.patch_embed)
         num_patches = self.patch_embed.num_patches
         
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
@@ -56,7 +60,8 @@ class MaskedAutoencoderViT(nn.Module):
             for i in range(decoder_depth)])
 
         self.decoder_norm = norm_layer(decoder_embed_dim)
-        self.decoder_pred = nn.Linear(decoder_embed_dim, patch_size[0] * patch_size[1] * img_size[0], bias=True) # decoder to patch
+        # self.decoder_pred = nn.Linear(decoder_embed_dim, patch_size[0] * patch_size[1] * img_size[0], bias=True) # decoder to patch
+        self.decoder_pred = nn.Linear(decoder_embed_dim, patch_size[0] * patch_size[1], bias=True) # decoder to patch
         # --------------------------------------------------------------------------
 
         # --------------------------------------------------------------------------
@@ -127,14 +132,23 @@ class MaskedAutoencoderViT(nn.Module):
         imgs: (N, C, H, W)
         x: (N, L, p*q*C)
         """
+        # print("self.patch_embed.patch_size", self.patch_embed.patch_size)
+        # print("imgs shape in patchify", imgs.shape)
+
         p, q = self.patch_embed.patch_size
+        # print("p, q:", p, q)
         assert imgs.shape[2] % p == 0 and imgs.shape[3] % q == 0
 
         h = imgs.shape[2] // p
         w = imgs.shape[3] // q
+        # print("h, w:", h, w)  # <-- Check if w=100, not 600
         x = imgs.reshape(shape=(imgs.shape[0], imgs.shape[1], h, p, w, q))
         x = torch.einsum('nchpwq->nhwpqc', x)
+        # print("x shape before reshape", x.shape)
+        # print("p * q * imgs.shape[1] * h", p * q * imgs.shape[1] * h)
         x = x.reshape(shape=(imgs.shape[0], h * w, p * q * imgs.shape[1]))
+        # print("x shape after reshape", x.shape)
+
         return x
 
     def unpatchify(self, x):
@@ -160,6 +174,9 @@ class MaskedAutoencoderViT(nn.Module):
         x: [N, L, D], sequence
         """
         N, L, D = x.shape  # batch, length, dim
+        #L = 100
+        # print("x shape in random masking", x.shape)
+        # print("initial L shape", L)                  # here L = 600, should be 100
         len_keep = int(L * (1 - mask_ratio))
         
         noise = torch.rand(N, L, device=x.device)  # noise in [0, 1]
@@ -183,10 +200,17 @@ class MaskedAutoencoderViT(nn.Module):
 
     def forward_encoder(self, x, mask_ratio):
         # embed patches
+        # print("x.shape", x.shape)
+        # x = x.squeeze(2) 
+        # x = x.unsqueeze(-3)  
+        # print("x.shape BEFORE self.patch_embed(x)", x.shape)
         x = self.patch_embed(x)
+        # print("x.shape BEFORE x + self.pos_embed[:, 1:, :]", x.shape)
 
         # add pos embed w/o cls token
         x = x + self.pos_embed[:, 1:, :]
+
+        # print("x.shape after x + self.pos_embed[:, 1:, :]", x.shape)
 
         # masking: length -> length * mask_ratio
         x, mask, ids_restore = self.random_masking(x, mask_ratio)
@@ -225,6 +249,7 @@ class MaskedAutoencoderViT(nn.Module):
     def forward_decoder(self, x, ids_restore):
         # embed tokens
         x = self.decoder_embed(x)
+        # print("self.decoder_embed(x)", x.shape)
 
         # append mask tokens to sequence
         mask_tokens = self.mask_token.repeat(x.shape[0], ids_restore.shape[1] + 1 - x.shape[1], 1)
@@ -234,14 +259,17 @@ class MaskedAutoencoderViT(nn.Module):
 
         # add pos embed
         x = x + self.decoder_pos_embed
+        # print("x + self.decoder_pos_embed", x.shape)
 
         # apply Transformer blocks
         for blk in self.decoder_blocks:
             x = blk(x)
         x = self.decoder_norm(x)
+        # print("self.decoder_norm(x)", x.shape)
 
         # predictor projection
         x = self.decoder_pred(x)
+        # print("self.decoder_pred(x)", x.shape)
 
         # remove cls token
         x = x[:, 1:, :]
@@ -254,12 +282,17 @@ class MaskedAutoencoderViT(nn.Module):
         pred: [N, L, p*q*C]
         mask: [N, L], 0 is keep, 1 is remove
         """
+        # imgs = imgs.squeeze(2)
         target = self.patchify(imgs) # [N, L, p*q*C]
+        # print("target size", target.shape)
         if self.norm_pix_loss:
             mean = target.mean(dim=-1, keepdim=True)
             var = target.var(dim=-1, keepdim=True)
             target = (target - mean) / (var + 1.e-6)**.5
 
+        # print(f"pred.shape: {pred.shape}, target.shape: {target.shape}")
+        #print("pred last dimension information:", pred[2])
+        #pred = pred[:, :, :100]
         loss = (pred - target) ** 2
 
         # loss_patches = loss.mean(dim=-1)  # [N, L], mean loss per patch
@@ -300,8 +333,13 @@ class MaskedAutoencoderViT(nn.Module):
 
 
     def forward(self, imgs, mask_ratio=0.75):
+        # print("imgs.shape", imgs.shape)
+        imgs = imgs.permute(0, 2, 1, 3)
         latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
-        pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*q*C]
+        # print("latent, mask, ids_restore", latent, mask, ids_restore)
+        # print("latent", latent.shape)
+        # print("ids_restore", ids_restore.shape)
+        pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*q*C] # N = batch size, L = 
         loss = self.forward_loss(imgs, pred, mask)
 
         orig_patched = self.patchify(imgs)
