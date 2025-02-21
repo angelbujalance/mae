@@ -359,6 +359,10 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
                 args.resume, map_location='cpu', check_hash=True)
         else:
             checkpoint = torch.load(args.resume, map_location='cpu')
+        print("model_without_ddp", model_without_ddp)
+        checkpoint = torch.load(args.resume, map_location='cpu')
+        print("checkpoint.keys()", checkpoint.keys())
+        print("checkpoint['model'].keys()", checkpoint['model'].keys())
         model_without_ddp.load_state_dict(checkpoint['model'])
         print("Resume checkpoint %s" % args.resume)
         if 'optimizer' in checkpoint and 'epoch' in checkpoint and not (hasattr(args, 'eval') and args.eval):

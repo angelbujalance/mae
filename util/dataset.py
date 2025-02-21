@@ -8,8 +8,8 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 
-import util.transformations as transformations
-import util.augmentations as augmentations
+#import transformations
+from .augmentations import CropResizing, FTSurrogate, Jitter, Rescaling
 
 
 class SignalDataset(Dataset):
@@ -54,18 +54,18 @@ class SignalDataset(Dataset):
         
         if self.train == False:
             transform = transforms.Compose([
-                augmentations.CropResizing(fixed_crop_len=self.args.input_size[-1], start_idx=0, resize=False),
+                CropResizing(fixed_crop_len=self.args.input_size[-1], start_idx=0, resize=False),
                 # transformations.PowerSpectralDensity(fs=100, nperseg=1000, return_onesided=False),
                 # transformations.MinMaxScaling(lower=-1, upper=1, mode="channel_wise")
             ])
         else:
             transform = transforms.Compose([
-                augmentations.CropResizing(fixed_crop_len=self.args.input_size[-1], resize=False),
+                CropResizing(fixed_crop_len=self.args.input_size[-1], resize=False),
                 # transformations.PowerSpectralDensity(fs=100, nperseg=1000, return_onesided=False),
                 # transformations.MinMaxScaling(lower=-1, upper=1, mode="channel_wise"),
-                augmentations.FTSurrogate(phase_noise_magnitude=self.args.ft_surr_phase_noise, prob=0.5),
-                augmentations.Jitter(sigma=self.args.jitter_sigma),
-                augmentations.Rescaling(sigma=self.args.rescaling_sigma),
+                FTSurrogate(phase_noise_magnitude=self.args.ft_surr_phase_noise, prob=0.5),
+                Jitter(sigma=self.args.jitter_sigma),
+                Rescaling(sigma=self.args.rescaling_sigma),
                 # augmentations.TimeFlip(prob=0.33),
                 # augmentations.SignFlip(prob=0.33)
             ])
