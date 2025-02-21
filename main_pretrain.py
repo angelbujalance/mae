@@ -173,7 +173,7 @@ def get_args_parser():
 
 
 def main(args):
-    args.input_size = (args.input_channels, args.input_electrodes, args.time_steps)
+    args.input_size = (args.input_electrodes, args.time_steps) # removed args.input_channels, from tuple
     args.patch_size = (args.patch_height, args.patch_width)
 
     # misc.init_distributed_mode(args)
@@ -318,10 +318,11 @@ def main(args):
 
     print(f"Start training for {args.epochs} epochs")
 
-    eval_criterion = "ncc"
+    eval_criterion = "loss"
     
     best_stats = {'loss':np.inf, 'ncc':0.0}
     best_eval_scores = {'count':0, 'nb_ckpts_max':5, 'eval_criterion':[best_stats[eval_criterion]]}
+    loss_ncc_dict = {'epochs': [], 'loss': [], 'ncc': []}
     for epoch in range(args.start_epoch, args.epochs):
         start_time = time.time()
 
@@ -365,10 +366,10 @@ def main(args):
                     best_eval_scores['eval_criterion'].pop()
                 best_eval_scores['eval_criterion'].append(val_stats[eval_criterion])
 
-                misc.save_best_model(
-                    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-                    loss_scaler=loss_scaler, epoch=epoch, test_stats=val_stats, evaluation_criterion=eval_criterion, 
-                    mode="decreasing")
+                #misc.save_best_model(
+                #    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
+                #    loss_scaler=loss_scaler, epoch=epoch, test_stats=val_stats, evaluation_criterion=eval_criterion, 
+                #    mode="decreasing")
         else:
             if early_stop.evaluate_increasing_metric(val_metric=val_stats[eval_criterion]):
                 break
@@ -381,10 +382,10 @@ def main(args):
                     best_eval_scores['eval_criterion'].pop()
                 best_eval_scores['eval_criterion'].append(val_stats[eval_criterion])
 
-                misc.save_best_model(
-                    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-                    loss_scaler=loss_scaler, epoch=epoch, test_stats=val_stats, evaluation_criterion=eval_criterion, 
-                    mode="increasing")
+                #misc.save_best_model(
+                #    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
+                #    loss_scaler=loss_scaler, epoch=epoch, test_stats=val_stats, evaluation_criterion=eval_criterion, 
+                #    mode="increasing")
             
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'epoch': epoch,}
 
@@ -398,6 +399,18 @@ def main(args):
         if args.wandb:
             wandb.log(train_history | test_history | online_history | {"Time per epoch [sec]": total_time})
 
+        # Update the dictionary with loss and ncc values
+        loss_ncc_dict['epochs'].append(epoch)
+        loss_ncc_dict['loss'].append(val_stats['loss'])
+        loss_ncc_dict['ncc'].append(val_stats['ncc'])
+
+    print("best_stats:", best_stats)
+    print("loss_ncc_dict:", loss_ncc_dict)
+
+    # Optionally, save the dictionary to a file
+    if args.output_dir:
+        with open(os.path.join(args.output_dir, "loss_ncc_dict.json"), "w", encoding="utf-8") as f:
+            json.dump(loss_ncc_dict, f)
 
 if __name__ == '__main__':
     args = get_args_parser()
