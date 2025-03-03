@@ -332,7 +332,7 @@ class MaskedAutoencoderViT(nn.Module):
         return (1-self.ncc_weight)*loss + self.ncc_weight*(1-ncc)
 
 
-    def forward(self, imgs, mask_ratio=0.75):
+    def forward(self, imgs, mask_ratio=0.75, visualize=False):
         # print("imgs.shape", imgs.shape)
         imgs = imgs.permute(0, 2, 1, 3)
         latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
@@ -369,6 +369,9 @@ class MaskedAutoencoderViT(nn.Module):
 
         # determine the std across all embeddings in the batch
         z_std = torch.nn.functional.normalize(z1, dim=-1).std(dim=0).mean() * z1.shape[-1]**0.5 
+
+        if visualize:
+            return loss, pred, mask, imgs
 
         return loss, loss_cos, cos_embed, z_std, imgs_hat, imgs_hat_masked
 
