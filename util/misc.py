@@ -322,8 +322,9 @@ def save_best_model(args, epoch, model, model_without_ddp, optimizer, loss_scale
     # remove directories from list
     file_names = [file for file in file_names if os.path.isfile(os.path.join(args.output_dir, file))]
     # ignore exceptions from list
-    exceptions = ["log.txt"]
-    file_names = [file for file in file_names if file not in exceptions]
+    # exceptions = ["log.txt"]
+    # if filename.endswith('.xml'):
+    file_names = [file for file in file_names if file.endswith('.pth')]
 
     # save the 5 best performing models
     if len(file_names) >= 5:
@@ -358,9 +359,9 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
             checkpoint = torch.hub.load_state_dict_from_url(
                 args.resume, map_location='cpu', check_hash=True)
         else:
-            checkpoint = torch.load(args.resume, map_location='cpu')
+            checkpoint = torch.load(args.resume, map_location='cpu', weights_only=False)
         print("model_without_ddp", model_without_ddp)
-        checkpoint = torch.load(args.resume, map_location='cpu')
+        checkpoint = torch.load(args.resume, map_location='cpu', weights_only=False)
         print("checkpoint.keys()", checkpoint.keys())
         print("checkpoint['model'].keys()", checkpoint['model'].keys())
         model_without_ddp.load_state_dict(checkpoint['model'])

@@ -331,10 +331,10 @@ def main(args):
 
         train_stats, train_history = train_one_epoch(model, data_loader_train, optimizer, device, epoch, loss_scaler,
                                                      log_writer=log_writer, args=args)
-        # if args.output_dir and (epoch % 100 == 0 or epoch + 1 == args.epochs):
-        #     misc.save_model(
-        #         args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-        #         loss_scaler=loss_scaler, epoch=epoch)
+        if args.output_dir and (epoch % 100 == 0 or epoch + 1 == args.epochs):
+             misc.save_model(
+                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
+                 loss_scaler=loss_scaler, epoch=epoch)
 
         val_stats, test_history = evaluate(data_loader_val, model, device, epoch, log_writer=log_writer, args=args)
         print(f"Loss / Normalized CC of the network on the {len(dataset_val)} val images: {val_stats['loss']:.4f}\
@@ -366,10 +366,11 @@ def main(args):
                     best_eval_scores['eval_criterion'].pop()
                 best_eval_scores['eval_criterion'].append(val_stats[eval_criterion])
 
-                #misc.save_best_model(
-                #    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-                #    loss_scaler=loss_scaler, epoch=epoch, test_stats=val_stats, evaluation_criterion=eval_criterion, 
-                #    mode="decreasing")
+                print("Saving model with lowest loss:")
+                misc.save_best_model(
+                    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
+                    loss_scaler=loss_scaler, epoch=epoch, test_stats=val_stats, evaluation_criterion=eval_criterion, 
+                    mode="decreasing")
         else:
             if early_stop.evaluate_increasing_metric(val_metric=val_stats[eval_criterion]):
                 break
@@ -382,10 +383,11 @@ def main(args):
                     best_eval_scores['eval_criterion'].pop()
                 best_eval_scores['eval_criterion'].append(val_stats[eval_criterion])
 
-                #misc.save_best_model(
-                #    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-                #    loss_scaler=loss_scaler, epoch=epoch, test_stats=val_stats, evaluation_criterion=eval_criterion, 
-                #    mode="increasing")
+                print("Saving model with best evaluation criterion score:")
+                misc.save_best_model(
+                    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
+                    loss_scaler=loss_scaler, epoch=epoch, test_stats=val_stats, evaluation_criterion=eval_criterion, 
+                    mode="increasing")
             
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'epoch': epoch,}
 
