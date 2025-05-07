@@ -332,10 +332,13 @@ class MaskedAutoencoderViT(nn.Module):
         return (1-self.ncc_weight)*loss + self.ncc_weight*(1-ncc)
 
 
-    def forward(self, imgs, mask_ratio=0.75, visualize=False):
+    def forward(self, imgs, mask_ratio=0.75, visualize=False, return_latent=False):
         # print("imgs.shape", imgs.shape)
         imgs = imgs.permute(0, 2, 1, 3)
         latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
+
+        if return_latent:
+            return latent
         # print("latent, mask, ids_restore", latent, mask, ids_restore)
         # print("latent", latent.shape)
         # print("ids_restore", ids_restore.shape)

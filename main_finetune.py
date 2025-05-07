@@ -188,7 +188,7 @@ def get_args_parser():
                         help='path where to save, empty for no saving')
     parser.add_argument('--log_dir', default='',
                         help='path where to tensorboard log (default: ./logs)')
-    # parser.add_argument('--wandb', action='store_true', default=False)
+    parser.add_argument('--wandb', action='store_true', default=False)
     # parser.add_argument('--wandb_project', default='',
     #                     help='project where to wandb log')
     # parser.add_argument('--wandb_id', default='', type=str,
